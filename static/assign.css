@@ -233,14 +233,16 @@ opacity:0
 }
 
 .assign-message {
-font-size:20px;
-color:#e0e0e0;
-text-align:center;
-margin:0;
-letter-spacing:.5px;
-font-weight:300;
-text-shadow:0 0 10px #bb86fc40;
-animation:text-pulse 2s infinite ease-in-out
+font-size: 24px;
+color: #bb86fc;
+text-align: center;
+margin: 0 0 20px 0;
+letter-spacing: 0.5px;
+font-weight: 300;
+text-shadow: 0 0 10px #bb86fc40;
+position: relative;
+z-index: 2;
+animation: float-text 3s infinite ease-in-out
 }
 
 @keyframes text-pulse {
