@@ -62,11 +62,12 @@
             </div>
             <table>
                 <tr>
-                    <th></th>
-                    {{range $x := iterate .MinCoord .MaxCoord}}
-                        <th>{{$x}}</th>
-                    {{end}}
-                </tr>
+    <th></th>
+    {{range $x := iterate .MinCoord .MaxCoord}}
+        <th>{{$x}}</th>
+    {{end}}
+    <th>{{.MaxCoord}}</th>
+</tr>
                 {{range $y := iterate 0 .Size}}
                     <tr>
                         <th>{{add $y 1}}</th>

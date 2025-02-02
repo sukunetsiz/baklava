@@ -21,14 +21,13 @@ const (
 )
 
 // StyleRanges defines the visual appearance ranges for letters
-// Each style parameter has a min and max value for randomization
 var StyleRanges = map[string][2]float64{
-    "hue":         {0, 360},    // Color hue range (0-360 degrees)
-    "saturation":  {70, 100},   // Color saturation range (%)
-    "lightness":   {60, 80},    // Color lightness range (%)
-    "hopDuration": {1.5, 2.5},  // Animation duration range (seconds)
-    "hopDelay":    {0, 2.0},    // Animation delay range (seconds)
-    "rotation":    {-10, 10},   // Letter rotation range (degrees)
+    "hue":         {0, 360},
+    "saturation":  {70, 100},
+    "lightness":   {60, 80},
+    "hopDuration": {1.5, 2.5},
+    "hopDelay":    {0, 2.0},
+    "rotation":    {-10, 10},
 }
 
 // CellStyle contains the visual styling information for each grid cell
@@ -69,15 +68,14 @@ type CoordinateExample struct {
 
 // Global variables
 var (
-    sessions  = make(map[string]string)  // Session storage (string-only)
-    templates *template.Template          // Compiled templates
+    sessions  = make(map[string]string) // Session storage
+    templates *template.Template        // Compiled templates
 )
 
 // init performs application initialization
 func init() {
-    // Initialize random seed
     rand.Seed(time.Now().UnixNano())
-    
+
     // Define template functions
     funcMap := template.FuncMap{
         "iterate": func(start, end int) []int {
@@ -91,28 +89,43 @@ func init() {
             return a + b
         },
     }
-    
-    // Parse templates
-    templates = template.Must(template.New("captcha.html").Funcs(funcMap).ParseFiles("templates/captcha.html"))
+
+    // Parse all templates
+    templates = template.Must(template.New("").Funcs(funcMap).ParseFiles(
+        "templates/queue.html",
+        "templates/captcha.html",
+        "templates/assign.html",
+    ))
 }
 
 // main starts the HTTP server and sets up routes
 func main() {
     // Set up static file serving
     http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-    
+
     // Set up route handlers
-    http.HandleFunc("/", showCaptcha)
-    http.HandleFunc("/verify", verifyCaptcha)
+    http.HandleFunc("/", showQueue)       // Queue page
+    http.HandleFunc("/captcha", showCaptcha) // CAPTCHA page
+    http.HandleFunc("/verify", verifyCaptcha) // CAPTCHA verification
+    http.HandleFunc("/assign", showAssign) // Success page
 
     // Start the server
+    log.Println("Server started on :8080")
     log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+// showQueue handles the display of the queue page
+func showQueue(w http.ResponseWriter, r *http.Request) {
+    // Render the queue.html template
+    if err := templates.ExecuteTemplate(w, "queue.html", nil); err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
 }
 
 // showCaptcha handles the display of the CAPTCHA puzzle
 func showCaptcha(w http.ResponseWriter, r *http.Request) {
     var data PageData
-    
+
     // Check for existing CAPTCHA data in session
     if viewDataJSON, exists := sessions["view_data"]; exists {
         if err := json.Unmarshal([]byte(viewDataJSON), &data); err != nil {
@@ -129,16 +142,15 @@ func showCaptcha(w http.ResponseWriter, r *http.Request) {
             sessions["view_data"] = string(jsonData)
         }
     }
-    
+
     // Handle any message parameters
     if msg := r.URL.Query().Get("message"); msg != "" {
         data.Message = msg
     }
-    
-    // Render the template
+
+    // Render the captcha.html template
     if err := templates.ExecuteTemplate(w, "captcha.html", data); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
     }
 }
 
@@ -150,34 +162,42 @@ func verifyCaptcha(w http.ResponseWriter, r *http.Request) {
     }
 
     answer := r.FormValue("captcha_answer")
-    
+
     // Validate answer format
     if !regexp.MustCompile(`^[1-8]-[1-8]$`).MatchString(answer) {
-        http.Redirect(w, r, "/?message=Please+enter+coordinates+in+correct+format", http.StatusSeeOther)
+        http.Redirect(w, r, "/captcha?message=Please+enter+coordinates+in+correct+format", http.StatusSeeOther)
         return
     }
 
     // Compare answer with stored correct answer
     correctAnswer := sessions["captcha_answer"]
     formattedAnswer := formatCoordinateAnswer(answer)
-    
+
     if formattedAnswer == correctAnswer {
         // Set solved status and clean up session
         sessions["captcha_solved"] = "true"
         delete(sessions, "captcha_answer")
         delete(sessions, "game_letter")
         delete(sessions, "view_data")
-        http.Redirect(w, r, "/login", http.StatusSeeOther)
+        http.Redirect(w, r, "/assign", http.StatusSeeOther)
         return
     }
 
-    http.Redirect(w, r, "/?message=Incorrect+answer.+Please+try+again", http.StatusSeeOther)
+    http.Redirect(w, r, "/captcha?message=Incorrect+answer.+Please+try+again", http.StatusSeeOther)
+}
+
+// showAssign handles the display of the success page
+func showAssign(w http.ResponseWriter, r *http.Request) {
+    // Render the assign.html template
+    if err := templates.ExecuteTemplate(w, "assign.html", nil); err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+    }
 }
 
 // prepareViewData generates a new CAPTCHA puzzle and associated data
 func prepareViewData() PageData {
     grid, gameLetter, answer := generateCaptcha()
-    
+
     // Store answer and game letter in session
     sessions["captcha_answer"] = answer
     sessions["game_letter"] = gameLetter
@@ -281,7 +301,7 @@ func generateCaptcha() ([][]Cell, string, string) {
         Letter: "",
         Styles: generateLetterStyles(),
     }
-    
+
     // Calculate answer coordinates (add 1 to convert from 0-based to 1-based)
     answer := fmt.Sprintf("%d-%d", missingEdge[1]+1, missingEdge[0]+1)
 
