@@ -30,7 +30,9 @@ Baklava CAPTCHA creates an 8x8 grid where letters are arranged in a rhombus patt
 
 1. Start the server:
 ```bash
-go run main.go
+go mod tidy
+export SESSION_KEY=$(openssl rand -base64 32)
+go run .
 ```
 
 2. Access the CAPTCHA system through your web browser at:
@@ -42,4 +44,4 @@ http://localhost:8080
 
 ## Requirements
 
-- Go 1.18
+- Go 1.23.5
