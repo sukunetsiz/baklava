@@ -63,12 +63,12 @@
             </div>
             <table>
                 <tr>
-    <th></th>
-    {{range $x := iterate .MinCoord .MaxCoord}}
-        <th>{{$x}}</th>
-    {{end}}
-    <th>{{.MaxCoord}}</th>
-</tr>
+                    <th></th>
+                    {{range $x := iterate .MinCoord .MaxCoord}}
+                        <th>{{$x}}</th>
+                    {{end}}
+                    <th>{{.MaxCoord}}</th>
+                </tr>
                 {{range $y := iterate 0 .Size}}
                     <tr>
                         <th>{{add $y 1}}</th>
@@ -89,7 +89,8 @@
                     </tr>
                 {{end}}
             </table>
-            <form method="post" action="/verify">
+            <!-- Note the changed action below -->
+            <form method="post" action="/captcha">
                 <input type="text" name="captcha_answer" placeholder="Example {{if .Example}}{{.Example.X}}-{{.Example.Y}}{{else}}4-6{{end}} (x,y)" required>
                 <input type="submit" value="Submit">
             </form>
@@ -135,3 +136,4 @@
     </div>
 </body>
 </html>
+
