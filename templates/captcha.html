@@ -89,8 +89,9 @@
                     </tr>
                 {{end}}
             </table>
-            <!-- Note the changed action below -->
+            <!-- Note the CSRF hidden field is added below -->
             <form method="post" action="/captcha">
+                {{.CSRFField}}
                 <input type="text" name="captcha_answer" placeholder="Example {{if .Example}}{{.Example.X}}-{{.Example.Y}}{{else}}4-6{{end}} (x,y)" required>
                 <input type="submit" value="Submit">
             </form>

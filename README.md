@@ -32,6 +32,7 @@ Baklava CAPTCHA creates an 8x8 grid where letters are arranged in a rhombus patt
 ```bash
 go mod tidy
 export SESSION_KEY=$(openssl rand -base64 32)
+export CSRF_KEY=$(openssl rand -base64 32)
 go run .
 ```
 
