@@ -1,140 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Baklava CAPTCHA</title>
-    <link rel="icon" type="image/x-icon" href="static/favicon.ico">
-    <link rel="stylesheet" href="/static/captcha.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Baklava CAPTCHA</title>
+  <link rel="icon" type="image/x-icon" href="static/favicon.ico">
+  <link rel="stylesheet" href="/static/captcha.css">
 </head>
 <body>
-    <div class="page-container">
-        <!-- Left Examples -->
-        <div class="side-examples left-examples">
-            <div class="example-case">
-                <span class="example-title">Top Edge Missing</span>
-                <div class="mini-grid">
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell missing">?</div>
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">O</div>
-                    <div class="mini-cell empty"></div>
-                    <div class="mini-cell letter">O</div>
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">O</div>
-                    <div class="mini-cell"></div>
-                </div>
-                <span class="example-explanation">Coordinate: 2-1</span>
-            </div>
-            
-            <div class="example-case">
-                <span class="example-title">Right Edge Missing</span>
-                <div class="mini-grid">
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">M</div>
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">M</div>
-                    <div class="mini-cell empty"></div>
-                    <div class="mini-cell missing">?</div>
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">M</div>
-                    <div class="mini-cell"></div>
-                </div>
-                <span class="example-explanation">Coordinate: 3-2</span>
-            </div>
+  <div class="queue-container">
+    <div class="queue-content">
+      <aside class="side-examples left-examples">
+        <div class="example-case">
+          <span class="example-title">Example of Top Edge Missing</span>
+          <div class="mini-grid">
+            <div class="mini-cell"></div>
+            <div class="mini-cell missing">?</div>
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell empty"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+          </div>
+          <span class="example-explanation">Coordinate: 2-1</span>
         </div>
+        <div class="example-case">
+          <span class="example-title">Example of Right Edge Missing</span>
+          <div class="mini-grid">
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell empty"></div>
+            <div class="mini-cell missing">?</div>
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+          </div>
+          <span class="example-explanation">Coordinate: 3-2</span>
+        </div>
+      </aside>
 
-        <!-- Main Container -->
-        <div class="baklava-captcha-container">
-            <h2>Baklava CAPTCHA Puzzle</h2>
-            <p>Find the missing edge to complete the rhombus made of '{{.GameLetter}}' letters and determine the box where the 4th letter will be placed. Write the coordinate of this box in "x-y" format. "x" represents the horizontal coordinate, and "y" represents the vertical coordinate. You can use numbers from 1 to 8 for each coordinate.</p>
-            
-            <div class="baklava-captcha-game-instruction">
-                {{.ShortInstruction}}
-            </div>
-            <div class="baklava-captcha-caution">
-                <strong>Example:</strong>
-                {{if .Example}}
-                    In the table, the letter '{{.Example.Letter}}' {{.Example.Explanation}}
-                {{else}}
-                    Sorry, example cannot be displayed at the moment.
-                {{end}}
-            </div>
-            <table>
-                <tr>
-                    <th></th>
-                    {{range $x := iterate .MinCoord .MaxCoord}}
-                        <th>{{$x}}</th>
-                    {{end}}
-                    <th>{{.MaxCoord}}</th>
-                </tr>
-                {{range $y := iterate 0 .Size}}
-                    <tr>
-                        <th>{{add $y 1}}</th>
-                        {{range $x := iterate 0 $.Size}}
-                            <td>
-                                {{$cell := index (index $.Grid $y) $x}}
-                                {{if ne $cell.Letter ""}}
-                                    <span class="baklava-captcha-letter" style="
-                                        --rotation: {{$cell.Styles.Rotation}}deg;
-                                        --letter-color: hsl({{$cell.Styles.Hue}}, {{$cell.Styles.Saturation}}%, {{$cell.Styles.Lightness}}%);
-                                        --hop-duration: {{$cell.Styles.HopDuration}}s;
-                                        --hop-delay: {{$cell.Styles.HopDelay}}s;">
-                                        {{$cell.Letter}}
-                                    </span>
-                                {{end}}
-                            </td>
-                        {{end}}
-                    </tr>
-                {{end}}
-            </table>
-            <!-- Note the CSRF hidden field is added below -->
-            <form method="post" action="/captcha">
-                {{.CSRFField}}
-                <input type="text" name="captcha_answer" placeholder="Example {{if .Example}}{{.Example.X}}-{{.Example.Y}}{{else}}4-6{{end}} (x,y)" required>
-                <input type="submit" value="Submit">
-            </form>
-            {{if .Message}}
-                <p class="baklava-captcha-message">{{.Message}}</p>
+      <main class="baklava-captcha-container">
+        <h2>Baklava CAPTCHA Puzzle</h2>
+        <p>
+          Find the missing edge to complete the rhombus made of '{{.GameLetter}}' letters and determine the box where the 4th letter will be placed.
+          Write the coordinate of this box in "x-y" format. "x" represents the horizontal coordinate, and "y" represents the vertical coordinate.
+          You can use numbers from 1 to 8 for each coordinate.
+        </p>
+        <div class="baklava-captcha-game-instruction">
+          {{.ShortInstruction}}
+        </div>
+        <div class="baklava-captcha-caution">
+          <strong>Example:</strong>
+          {{if .Example}}
+              In the table, the letter '{{.Example.Letter}}' {{.Example.Explanation}}
+          {{else}}
+              Sorry, example cannot be displayed at the moment.
+          {{end}}
+        </div>
+        <table>
+          <tr>
+            <th></th>
+            {{range $x := iterate .MinCoord .MaxCoord}}
+              <th>{{$x}}</th>
             {{end}}
-        </div>
+            <th>{{.MaxCoord}}</th>
+          </tr>
+          {{range $y := iterate 0 .Size}}
+            <tr>
+              <th>{{add $y 1}}</th>
+              {{range $x := iterate 0 $.Size}}
+                <td>
+                  {{$cell := index (index $.Grid $y) $x}}
+                  {{if ne $cell.Letter ""}}
+                    <span class="baklava-captcha-letter" style="
+                        --rotation: {{$cell.Styles.Rotation}}deg;
+                        --letter-color: hsl({{$cell.Styles.Hue}}, {{$cell.Styles.Saturation}}%, {{$cell.Styles.Lightness}}%);
+                        --hop-duration: {{$cell.Styles.HopDuration}}s;
+                        --hop-delay: {{$cell.Styles.HopDelay}}s;">
+                      {{$cell.Letter}}
+                    </span>
+                  {{end}}
+                </td>
+              {{end}}
+            </tr>
+          {{end}}
+        </table>
+        <!-- Note the CSRF hidden field is added below -->
+        <form method="post" action="/captcha">
+          {{.CSRFField}}
+          <input type="text" name="captcha_answer" placeholder="Example {{if .Example}}{{.Example.X}}-{{.Example.Y}}{{else}}4-6{{end}} (x,y)" required>
+          <input type="submit" value="Submit">
+        </form>
+        {{if .Message}}
+          <p class="baklava-captcha-message">{{.Message}}</p>
+        {{end}}
+      </main>
 
-        <!-- Right Examples -->
-        <div class="side-examples right-examples">
-            <div class="example-case">
-                <span class="example-title">Bottom Edge Missing</span>
-                <div class="mini-grid">
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">E</div>
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">E</div>
-                    <div class="mini-cell empty"></div>
-                    <div class="mini-cell letter">E</div>
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell missing">?</div>
-                    <div class="mini-cell"></div>
-                </div>
-                <span class="example-explanation">Coordinate: 2-3</span>
-            </div>
-            
-            <div class="example-case">
-                <span class="example-title">Left Edge Missing</span>
-                <div class="mini-grid">
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">T</div>
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell missing">?</div>
-                    <div class="mini-cell empty"></div>
-                    <div class="mini-cell letter">T</div>
-                    <div class="mini-cell"></div>
-                    <div class="mini-cell letter">T</div>
-                    <div class="mini-cell"></div>
-                </div>
-                <span class="example-explanation">Coordinate: 1-2</span>
-            </div>
+      <aside class="side-examples right-examples">
+        <div class="example-case">
+          <span class="example-title">Example of Bottom Edge Missing</span>
+          <div class="mini-grid">
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell empty"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+            <div class="mini-cell missing">?</div>
+            <div class="mini-cell"></div>
+          </div>
+          <span class="example-explanation">Coordinate: 2-3</span>
         </div>
+        <div class="example-case">
+          <span class="example-title">Example of Left Edge Missing</span>
+          <div class="mini-grid">
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+            <div class="mini-cell missing">?</div>
+            <div class="mini-cell empty"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+            <div class="mini-cell letter">{{.GameLetter}}</div>
+            <div class="mini-cell"></div>
+          </div>
+          <span class="example-explanation">Coordinate: 1-2</span>
+        </div>
+      </aside>
     </div>
+  </div>
 </body>
 </html>
 

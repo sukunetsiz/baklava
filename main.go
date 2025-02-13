@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/gorilla/csrf"
 	"github.com/gorilla/sessions"
 )
@@ -22,6 +23,11 @@ var (
 )
 
 func init() {
+	// Load environment variables from .env file if it exists.
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found; proceeding with system environment variables")
+	}
+
 	// Seed the random generator.
 	rand.Seed(time.Now().UnixNano())
 
@@ -40,22 +46,18 @@ func init() {
 	// Retrieve the CSRF key from the environment.
 	csrfKey = os.Getenv("CSRF_KEY")
 	if csrfKey == "" {
-		// Fallback to the session key if CSRF_KEY is not set.
-		// NOTE: In production you should use a dedicated, unique key.
 		log.Println("Warning: CSRF_KEY environment variable not set; falling back to SESSION_KEY")
 		csrfKey = sessionKey
 	}
 
 	// Create a new FilesystemStore.
 	store = sessions.NewFilesystemStore("", []byte(sessionKey))
-	// Remove any maximum length restrictions.
 	store.MaxLength(0)
 }
 
 // securityHeadersMiddleware adds important security headers to all responses.
 func securityHeadersMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Allow inline styles (needed for dynamic CSS custom properties).
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline';")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")

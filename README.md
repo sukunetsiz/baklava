@@ -20,29 +20,43 @@ Baklava CAPTCHA creates an 8x8 grid where letters are arranged in a rhombus patt
 
 ## How It Works
 
-1. The system generates a rhombus pattern using a randomly selected letter
-2. One edge of the rhombus is removed
-3. Users need to identify the coordinates (x-y format) where the missing letter should be
-4. Additional random letters are placed on the grid to increase complexity
-5. Visual effects are applied to make OCR recognition more challenging
+1. The system generates a rhombus pattern using a randomly selected letter.
+2. One edge of the rhombus is removed.
+3. Users need to identify the coordinates (in "x-y" format) where the missing letter should be placed.
+4. Additional random letters are placed on the grid to increase complexity.
+5. Visual effects are applied to thwart automated OCR attempts.
 
 ## Usage
 
-1. Start the server:
-```bash
-go mod tidy
-export SESSION_KEY=$(openssl rand -base64 32)
-export CSRF_KEY=$(openssl rand -base64 32)
-go run .
-```
+1. **Install Dependencies**
 
-2. Access the CAPTCHA system through your web browser at:
-```
-http://localhost:8080
-```
+   Ensure you have Go (version 1.23.5 or higher) installed, then run:
+   ```bash
+   go mod tidy
+   ```
 
-3. Enter the coordinates of the missing letter in "x-y" format (e.g., "4-6")
+2. **Set Up Environment Variables**
+
+   In the project's root directory, open the existing .env file and replace the dummy values with a secure, randomly generated 32-character alphanumerical key. You can generate one using [this generator](https://passwords-generator.org/alphanumeric).
+
+3. **Start the Server**
+
+   Run the application with:
+   ```bash
+   go run .
+   ```
+
+4. **Access the CAPTCHA System**
+
+   Open your web browser and navigate to:
+   ```
+   http://localhost:8080
+   ```
+
+5. **Solve the CAPTCHA**
+
+   Enter the coordinates of the missing letter in "x-y" format (e.g., "4-6").
 
 ## Requirements
 
-- Go 1.23.5
+- Go 1.23.5 or higher
