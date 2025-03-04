@@ -28,7 +28,7 @@ func prepareViewData(session *sessions.Session) PageData {
 			Letter:      exampleLetter.Letter,
 			X:           exampleLetter.X,
 			Y:           exampleLetter.Y,
-			Explanation: fmt.Sprintf("It is at coordinates %d-%d. This represents column %d and row %d.", exampleLetter.X, exampleLetter.Y, exampleLetter.X, exampleLetter.Y),
+			Explanation: fmt.Sprintf("It is at coordinates %d-%d. This represents column %d and row %d", exampleLetter.X, exampleLetter.Y, exampleLetter.X, exampleLetter.Y),
 		}
 	}
 

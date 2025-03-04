@@ -55,11 +55,11 @@
           {{.ShortInstruction}}
         </div>
         <div class="baklava-captcha-caution">
-          <strong>Example:</strong>
+          <strong>Example</strong>
           {{if .Example}}
               In the table, the letter '{{.Example.Letter}}' {{.Example.Explanation}}
           {{else}}
-              Sorry, example cannot be displayed at the moment.
+              Sorry, example cannot be displayed at the moment
           {{end}}
         </div>
         <table>
@@ -91,7 +91,7 @@
           {{end}}
         </table>
         <!-- Note the CSRF hidden field is added below -->
-        <form method="post" action="/captcha">
+        <form method="post" action="/">
           {{.CSRFField}}
           <input type="text" name="captcha_answer" placeholder="Example {{if .Example}}{{.Example.X}}-{{.Example.Y}}{{else}}4-6{{end}} (x,y)" required>
           <input type="submit" value="Submit">

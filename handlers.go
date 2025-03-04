@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/csrf"
+	"github.com/gorilla/sessions"
 )
 
 // CaptchaTemplateData embeds PageData and adds a CSRFField for our form.
@@ -36,66 +37,37 @@ func init() {
 	))
 }
 
-// showQueue displays the waiting queue page and initializes the session.
-func showQueue(w http.ResponseWriter, r *http.Request) {
-	// Retrieve the session.
-	session, err := store.Get(r, "captcha-session")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// If the session already has a stage, redirect appropriately.
-	if stage, ok := session.Values["flow_stage"].(string); ok {
-		if stage != "queue" {
-			if stage == "captcha" {
-				http.Redirect(w, r, "/captcha", http.StatusSeeOther)
-				return
-			} else if stage == "assign" {
-				http.Redirect(w, r, "/assign", http.StatusSeeOther)
-				return
-			}
-		}
-	} else {
-		// Initialize session.
+// showQueueInternal renders the queue page.
+func showQueueInternal(w http.ResponseWriter, r *http.Request, session *sessions.Session) {
+	// Ensure session is initialized.
+	if session.Values["flow_stage"] == nil {
 		session.Values["flow_stage"] = "queue"
 		session.Values["start_time"] = strconv.FormatInt(time.Now().Unix(), 10)
+		session.Save(r, w)
 	}
-
-	if err := session.Save(r, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	if err := templates.ExecuteTemplate(w, "queue.html", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-// showCaptcha handles both GET and POST for the captcha page.
-func showCaptcha(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "captcha-session")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Ensure the user has waited at least 20 seconds.
+// showCaptchaInternal handles both GET and POST for the captcha page.
+func showCaptchaInternal(w http.ResponseWriter, r *http.Request, session *sessions.Session) {
+	// Ensure waiting period has passed.
 	startTimeStr, ok := session.Values["start_time"].(string)
 	if !ok {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		showQueueInternal(w, r, session)
 		return
 	}
 	startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
 	if err != nil || time.Now().Unix()-startTime < 20 {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		showQueueInternal(w, r, session)
 		return
 	}
 
-	// Mark that the user is now in the captcha stage.
+	// Set stage to captcha.
 	session.Values["flow_stage"] = "captcha"
+	session.Save(r, w)
 
-	// Handle POST: processing the captcha answer.
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, "Error parsing form", http.StatusBadRequest)
@@ -107,10 +79,7 @@ func showCaptcha(w http.ResponseWriter, r *http.Request) {
 			data := prepareViewData(session)
 			data.Message = "Please enter coordinates in correct format"
 			session.Values["view_data"] = data
-			if err := session.Save(r, w); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			session.Save(r, w)
 			tplData := CaptchaTemplateData{
 				PageData:  data,
 				CSRFField: csrf.TemplateField(r),
@@ -128,21 +97,15 @@ func showCaptcha(w http.ResponseWriter, r *http.Request) {
 			delete(session.Values, "captcha_answer")
 			delete(session.Values, "game_letter")
 			delete(session.Values, "view_data")
-			if err := session.Save(r, w); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			http.Redirect(w, r, "/assign", http.StatusSeeOther)
+			session.Save(r, w)
+			showAssignInternal(w, r, session)
 			return
 		}
 		// Incorrect answer: prepare new view data with an error.
 		data := prepareViewData(session)
 		data.Message = "Incorrect answer. Please try again"
 		session.Values["view_data"] = data
-		if err := session.Save(r, w); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		session.Save(r, w)
 		tplData := CaptchaTemplateData{
 			PageData:  data,
 			CSRFField: csrf.TemplateField(r),
@@ -166,12 +129,7 @@ func showCaptcha(w http.ResponseWriter, r *http.Request) {
 		data = prepareViewData(session)
 		session.Values["view_data"] = data
 	}
-
-	if err := session.Save(r, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	session.Save(r, w)
 	tplData := CaptchaTemplateData{
 		PageData:  data,
 		CSRFField: csrf.TemplateField(r),
@@ -181,25 +139,14 @@ func showCaptcha(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// showAssign displays the assignment page to users who have solved the captcha.
-func showAssign(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "captcha-session")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+// showAssignInternal displays the assignment page to users who have solved the captcha.
+func showAssignInternal(w http.ResponseWriter, r *http.Request, session *sessions.Session) {
 	if solved, ok := session.Values["captcha_solved"].(string); !ok || solved != "true" || session.Values["flow_stage"] != "assign" {
-		if err := session.Save(r, w); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, r, "/captcha", http.StatusSeeOther)
+		session.Save(r, w)
+		showCaptchaInternal(w, r, session)
 		return
 	}
-	if err := session.Save(r, w); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	session.Save(r, w)
 	if err := templates.ExecuteTemplate(w, "assign.html", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

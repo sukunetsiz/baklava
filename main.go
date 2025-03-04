@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -70,15 +71,12 @@ func securityHeadersMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	// Create a new ServeMux.
 	mux := http.NewServeMux()
 
-	// Serve static files (e.g. CSS, JS, images) from the "static" folder.
+	// Serve static files from the "static" folder.
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	// Define route handlers.
-	mux.HandleFunc("/", showQueue)
-	mux.HandleFunc("/captcha", showCaptcha)
-	mux.HandleFunc("/assign", showAssign)
+	// All routes are handled by mainHandler at "/"
+	mux.HandleFunc("/", mainHandler)
 
 	// For local development over HTTP, disable the "Secure" flag.
 	secureFlag := true
@@ -93,5 +91,46 @@ func main() {
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", handler))
+}
+
+// mainHandler checks session state and waiting time so that only "/" is shown in the address bar.
+func mainHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, "captcha-session")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// If session is new, initialize as queue.
+	stage, ok := session.Values["flow_stage"].(string)
+	if !ok {
+		session.Values["flow_stage"] = "queue"
+		session.Values["start_time"] = strconv.FormatInt(time.Now().Unix(), 10)
+		session.Save(r, w)
+		stage = "queue"
+	}
+
+	// If in queue, check if waiting period is over.
+	if stage == "queue" {
+		if startTimeStr, ok := session.Values["start_time"].(string); ok {
+			startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
+			if err == nil && time.Now().Unix()-startTime >= 20 {
+				session.Values["flow_stage"] = "captcha"
+				session.Save(r, w)
+				stage = "captcha"
+			}
+		}
+	}
+
+	switch stage {
+	case "queue":
+		showQueueInternal(w, r, session)
+	case "captcha":
+		showCaptchaInternal(w, r, session)
+	case "assign":
+		showAssignInternal(w, r, session)
+	default:
+		showQueueInternal(w, r, session)
+	}
 }
 
