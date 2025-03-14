@@ -23,6 +23,8 @@ var (
 	csrfKey    string
 )
 
+const idleTimeout = 300 // Idle timeout in seconds (5 minutes)
+
 func init() {
 	// Load environment variables from .env file if it exists.
 	if err := godotenv.Load(); err != nil {
@@ -93,20 +95,55 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", handler))
 }
 
-// mainHandler checks session state and waiting time so that only "/" is shown in the address bar.
+// mainHandler checks session state, idle timeout, and waiting time so that only "/" is shown in the address bar.
 func mainHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, "captcha-session")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// Redirect any URL that is not "/" to "/"
+	if r.URL.Path != "/" {
+		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
+
+	// Attempt to retrieve the session.
+	session, err := store.Get(r, "captcha-session")
+	if err != nil {
+		// Session retrieval failed; create a new session without setting an error message.
+		session, _ = store.New(r, "captcha-session")
+		pageData := prepareViewData(session)
+		session.Values["view_data"] = pageData
+		session.Values["flow_stage"] = "captcha"
+		session.Values["start_time"] = strconv.FormatInt(time.Now().Unix(), 10)
+		session.Save(r, w)
+		showCaptchaInternal(w, r, session)
+		return
+	}
+
+	// Idle timeout check: if no activity within idleTimeout seconds, reset the session.
+	if lastActiveStr, ok := session.Values["last_active"].(string); ok {
+		if lastActive, err := strconv.ParseInt(lastActiveStr, 10, 64); err == nil {
+			if time.Now().Unix()-lastActive > idleTimeout {
+				// Session idle timeout exceeded, clear session and create a new one without an error message.
+				session.Options.MaxAge = -1 // Mark session for deletion.
+				session.Save(r, w)
+				session, _ = store.New(r, "captcha-session")
+				pageData := prepareViewData(session)
+				session.Values["view_data"] = pageData
+				session.Values["flow_stage"] = "captcha"
+				session.Values["start_time"] = strconv.FormatInt(time.Now().Unix(), 10)
+				session.Save(r, w)
+				showCaptchaInternal(w, r, session)
+				return
+			}
+		}
+	}
+
+	// Update last_active timestamp for every request.
+	session.Values["last_active"] = strconv.FormatInt(time.Now().Unix(), 10)
 
 	// If session is new, initialize as queue.
 	stage, ok := session.Values["flow_stage"].(string)
 	if !ok {
 		session.Values["flow_stage"] = "queue"
 		session.Values["start_time"] = strconv.FormatInt(time.Now().Unix(), 10)
-		session.Save(r, w)
 		stage = "queue"
 	}
 
@@ -116,11 +153,12 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 			startTime, err := strconv.ParseInt(startTimeStr, 10, 64)
 			if err == nil && time.Now().Unix()-startTime >= 20 {
 				session.Values["flow_stage"] = "captcha"
-				session.Save(r, w)
 				stage = "captcha"
 			}
 		}
 	}
+
+	session.Save(r, w)
 
 	switch stage {
 	case "queue":
@@ -133,4 +171,3 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		showQueueInternal(w, r, session)
 	}
 }
-
