@@ -60,3 +60,11 @@ Baklava CAPTCHA creates an 8x8 grid where letters are arranged in a rhombus patt
 ## Requirements
 
 - Go 1.23.5 or higher
+
+### Screenshots
+
+![Queue Page](images/1.png)
+---
+![CAPTCHA Page](images/2.png)
+---
+![Assign Page](images/3.png)
